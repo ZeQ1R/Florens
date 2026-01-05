@@ -36,6 +36,7 @@ function App() {
   return (
     <div className="App">
       <BrowserRouter>
+        <Toaster position="top-right" richColors />
         <Routes>
           <Route path="/" element={<LandingPage />} />
         </Routes>
