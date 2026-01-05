@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, User, Mail, Phone, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, User, Mail, Phone, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -11,6 +11,11 @@ import {
   SelectValue,
 } from './ui/select';
 import { services } from '../data/mock';
+import axios from 'axios';
+import { toast } from 'sonner';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 const AppointmentSection = () => {
   const [formData, setFormData] = useState({
@@ -21,6 +26,7 @@ const AppointmentSection = () => {
     date: '',
     time: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleInputChange = (e) => {
@@ -32,22 +38,64 @@ const AppointmentSection = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const validateForm = () => {
+    if (!formData.fullName.trim()) {
+      toast.error('Please enter your full name');
+      return false;
+    }
+    if (!formData.phone.trim()) {
+      toast.error('Please enter your phone number');
+      return false;
+    }
+    if (!formData.email.trim()) {
+      toast.error('Please enter your email');
+      return false;
+    }
+    if (!formData.service) {
+      toast.error('Please select a service');
+      return false;
+    }
+    if (!formData.date) {
+      toast.error('Please select a date');
+      return false;
+    }
+    if (!formData.time) {
+      toast.error('Please select a time');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Mock submission
-    console.log('Appointment submitted:', formData);
-    setIsSubmitted(true);
-    setTimeout(() => {
-      setIsSubmitted(false);
-      setFormData({
-        fullName: '',
-        phone: '',
-        email: '',
-        service: '',
-        date: '',
-        time: '',
-      });
-    }, 3000);
+    
+    if (!validateForm()) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      await axios.post(`${API}/appointments`, formData);
+      setIsSubmitted(true);
+      toast.success('Appointment request submitted successfully!');
+      
+      // Reset form after 3 seconds
+      setTimeout(() => {
+        setIsSubmitted(false);
+        setFormData({
+          fullName: '',
+          phone: '',
+          email: '',
+          service: '',
+          date: '',
+          time: '',
+        });
+      }, 3000);
+    } catch (error) {
+      console.error('Error submitting appointment:', error);
+      toast.error('Failed to submit appointment. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const timeSlots = [
@@ -60,6 +108,9 @@ const AppointmentSection = () => {
     '4:00 PM',
     '5:00 PM',
   ];
+
+  // Get minimum date (today)
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <section id="appointments" className="py-24 bg-slate-50">
@@ -215,6 +266,7 @@ const AppointmentSection = () => {
                         id="date"
                         name="date"
                         type="date"
+                        min={today}
                         value={formData.date}
                         onChange={handleInputChange}
                         className="mt-2 h-12 rounded-xl border-slate-200 focus:border-teal-500 focus:ring-teal-500"
@@ -244,9 +296,10 @@ const AppointmentSection = () => {
 
                   <Button
                     type="submit"
-                    className="w-full h-14 bg-teal-600 hover:bg-teal-700 text-white text-lg font-semibold rounded-xl shadow-lg shadow-teal-600/25 transition-all hover:shadow-xl hover:shadow-teal-600/30"
+                    disabled={isSubmitting}
+                    className="w-full h-14 bg-teal-600 hover:bg-teal-700 text-white text-lg font-semibold rounded-xl shadow-lg shadow-teal-600/25 transition-all hover:shadow-xl hover:shadow-teal-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Request Appointment
+                    {isSubmitting ? 'Submitting...' : 'Request Appointment'}
                   </Button>
                 </form>
               )}
